@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <vector>
+#include <bitset>
 #include "../firmware/data.h"
 
 class MP7PatternSerializer {
@@ -121,3 +122,40 @@ class CTP7PatternSerializer {
     
 };
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+class VCU118PatternSerializer {
+    
+    public:
+        VCU118PatternSerializer(const std::string &fname, unsigned int nmux=1, int nempty=0, unsigned int nlinks=0, const std::string &boardName = "Board_VCU118_L1TkObj") ;
+        ~VCU118PatternSerializer() ;
+        
+        void operator()(const MP7DataWord event[VCU118_NCHANN], bool last = false) ;
+        
+    protected:
+        const std::string fname_;
+        const unsigned int nlinks_, nmux_, nchann_, nempty_;
+        const bool fillmagic_;
+        FILE *file_;
+        unsigned int ipattern_;
+        std::bitset<MP7DataWordWidth> bset_;
+        class Pattern {
+            public:
+                Pattern() {}
+                Pattern(const Pattern & other) { for (unsigned int i = 0; i < VCU118_NCHANN; ++i) words[i] = other.words[i]; }
+                MP7DataWord & operator[](int i) { return words[i]; }
+                const MP7DataWord & operator[](int i) const { return words[i]; }
+                void operator=(const Pattern & other) { for (unsigned int i = 0; i < VCU118_NCHANN; ++i) words[i] = other.words[i]; }
+            private:
+                MP7DataWord words[VCU118_NCHANN];
+        };
+        std::vector<Pattern> buffer_; // for muxing; holds the next patterns in output format. will fill nmux events, first, then print them all out
+
+        template<typename T> void print(const T & event, bool last = false);
+        template<typename T> void set(const T & object);
+        void push(const MP7DataWord event[VCU118_NCHANN]);
+        void flush();
+        void zero();
+
+};

@@ -64,23 +64,37 @@ class DiscretePFInputs {
 			if (!event_.readFromFile(file_)) return false;
 			return true;
 		}
-		bool nextEvent(TkObj track[NTRACK], z0_t & pv_gen, z0_t & pv_cmssw) {
+		bool nextEvent(TkObj track[NTRACK], z0_t & pv_gen, z0_t & pv_cmssw, bool transpose = false, bool verbose = false) {
 			if (feof(file_)) return false;
 			if (!event_.readFromFile(file_)) return false;
 			if (event_.regions.size() != N_IN_SECTORS) {
             	printf("ERROR: Mismatching number of input regions: %lu\n", event_.regions.size());
             	return false;
         	}
+        	if (verbose) printf("Beginning of run %u, lumi %u, event %lu \n", event_.run, event_.lumi, event_.event);
 
-        	TkObj track_tmp[2*NTRACKS_PER_SECTOR];
+        	TkObj track_tmp[WORDS_PER_OBJ*NTRACKS_PER_SECTOR];
+        	int index = 0;
         	for (int is = 0; is < N_IN_SECTORS; ++is) {
         		const Region & r = event_.regions[is];
-        		dpf2fw::convert<2*NTRACKS_PER_SECTOR>(r.track, track_tmp);
+        		if (verbose) printf("Read region %u with %lu tracks\n", is, r.track.size());
+        		dpf2fw::convert<WORDS_PER_OBJ*NTRACKS_PER_SECTOR>(r.track, track_tmp);
         		for (int i = 0, t = 0; i < NTRACKS_PER_SECTOR; ++i) {
         			//track[2*is+0][i] = track_tmp[t++];
         			//track[2*is+1][i] = track_tmp[t++];
-        			track[((2*is+0)*NTRACKS_PER_SECTOR)+i] = track_tmp[t++];
-        			track[((2*is+1)*NTRACKS_PER_SECTOR)+i] = track_tmp[t++];
+        			if (WORDS_PER_OBJ==2) {
+        				index = (transpose) ? (i*N_IN_SECTORS)+(WORDS_PER_OBJ*is+0)
+        							   : ((WORDS_PER_OBJ*is+0)*NTRACKS_PER_SECTOR)+i;
+        				track[index] = track_tmp[t++];
+        				index = (transpose) ? (i*N_IN_SECTORS)+(WORDS_PER_OBJ*is+1)
+        							   : ((WORDS_PER_OBJ*is+1)*NTRACKS_PER_SECTOR)+i;
+    	    			track[index] = track_tmp[t++];
+        			}
+        			else {
+        				index = (transpose) ? (i*N_IN_SECTORS)+(WORDS_PER_OBJ*is)
+        							   : ((WORDS_PER_OBJ*is)*NTRACKS_PER_SECTOR)+i;
+						track[index] = track_tmp[t++];
+    	    		}
         		}
         	}
 
